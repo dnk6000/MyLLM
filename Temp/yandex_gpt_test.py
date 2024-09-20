@@ -18,7 +18,7 @@ headers = {
 }
 
 data = {
-    "modelUri": "gpt://b1g7bnjhumh84ul2i4f4/yandexgpt/latest",
+    "modelUri": f"gpt://{config.YANDEX_CATALOG}/yandexgpt/latest",
     "completionOptions": {
         "stream": False,
         "temperature": 0,

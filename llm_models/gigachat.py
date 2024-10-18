@@ -66,7 +66,7 @@ def get_token(force=False):
     }
 
     response = requests.request("POST", url, headers=headers, data=payload)
-    print(response.text)
+    # print(response.text)
 
     data = json.loads(response.text)
 
@@ -166,8 +166,43 @@ def test_via_langchain():
         # Выводим ответ бота на экран
         print("Bot: ", res.content)
 
+def AlexApple():
+    from langchain.schema import HumanMessage, SystemMessage
+    from langchain_community.chat_models.gigachat import GigaChat
+
+    # Авторизация в сервисе GigaChat
+    chat = (GigaChat
+            (credentials='сюда пищем аутентификацию ',
+             verify_ssl_certs=False
+             ))
+
+    GigaChat()
+    messages = [
+        SystemMessage(
+            content="Ты эмпатичный бот-психолог, который помогает пользователю решить его проблемы."
+        )
+    ]
+
+    # Запускаем бесконечный цикл
+    while True:
+        # Запрашиваем ввод пользователя через консоль
+        user_input = input("User: ")
+
+        # Добавляем сообщение пользователя в список сообщений
+        messages.append(HumanMessage(content=user_input))
+
+        # Отправляем список сообщений в чат и получаем ответ от бота
+        response = chat(messages)
+
+        # Добавляем ответ бота в список сообщений
+        messages.append(response)
+
+        # Выводим ответ бота на экран
+        print("Bot: ", response.content)
+
 
 if __name__ == "__main__":
     get_token()
+    AlexApple()
     # test_via_langchain()
     # test_via_api()

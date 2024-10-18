@@ -1,7 +1,9 @@
 import telebot
 from telebot import types
+
 from llm_models import chatgpt, yandex_gpt, gigachat
-from config import BOT_TOKEN
+from config import BOT_TOKEN, DATA_FOLDER
+from draw_models import stability, yandex_art
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -23,6 +25,13 @@ def start(message):
     show_menu(message)
 
 
+@bot.message_handler(commands=['test_stability'])
+def test_stability(message):
+    chat_id = message.chat.id
+    send_image(chat_id, stability.get_test_fname())
+    bot.send_message(chat_id, "Testing stability by sending an image.")
+
+
 # Меню с выбором модели и другими опциями
 def show_menu(message):
     chat_id = message.chat.id
@@ -31,16 +40,17 @@ def show_menu(message):
     btn2 = types.KeyboardButton("ChatGPT-4o")
     btn3 = types.KeyboardButton("YandexGPT")
     btn4 = types.KeyboardButton("GigaCHAT")
-    btn5 = types.KeyboardButton("Установить системный промпт")
-    btn6 = types.KeyboardButton("Очистить историю")  # Новая кнопка
-    markup.add(btn1, btn2, btn3, btn4)
-    markup.add(btn5, btn6)
+    btn5 = types.KeyboardButton("YandexART")
+    btn_s1 = types.KeyboardButton("Установить системный промпт")
+    btn_s2 = types.KeyboardButton("Очистить историю")  # Новая кнопка
+    markup.add(btn1, btn2, btn3, btn4, btn5)
+    markup.add(btn_s1, btn_s2)
 
     bot.send_message(chat_id, "Выберите модель:", reply_markup=markup)
 
 
 # Обработка выбора модели
-@bot.message_handler(func=lambda message: message.text in ["ChatGPT-3.5", "ChatGPT-4o", "YandexGPT", "GigaCHAT"])
+@bot.message_handler(func=lambda message: message.text in ["ChatGPT-3.5", "ChatGPT-4o", "YandexGPT", "GigaCHAT", "YandexART"])
 def select_model(message):
     chat_id = message.chat.id
     selected_model = message.text
@@ -115,25 +125,41 @@ def handle_message(message):
         return
 
     model = user_data[chat_id]['model']
-    system_prompt = user_data[chat_id].get('system_prompt')
-    user_message = message.text
 
-    user_data[chat_id]['history'].append(get_dict_user_prompt(chat_id, user_message))
+    if model == 'YandexART':
+        bot.send_message(chat_id, "Requesting image from Yandex ART ...")
+        fname = f"{DATA_FOLDER}\\yart_{chat_id}.jpg"
+        yandex_art.get_image(prompt=message.text, fname=fname)
+        send_image(chat_id, fname)
+    else:
+        system_prompt = user_data[chat_id].get('system_prompt')
+        user_message = message.text
 
-    history = user_data[chat_id]['history']
+        user_data[chat_id]['history'].append(get_dict_user_prompt(chat_id, user_message))
 
-    response_text = 'model undefined'
-    if model == "ChatGPT-3.5" or model == "ChatGPT-4o":
-        response_text = chatgpt.ask_openai(history, model=model, system_prompt=system_prompt)
-    elif model == "YandexGPT":
-        response_text = yandex_gpt.ask_yandex_gpt(history, system_prompt)
-    elif model == "GigaCHAT":
-        response_text = gigachat.ask_gigachat(history, system_prompt)
+        history = user_data[chat_id]['history']
 
-    bot.send_message(chat_id, response_text)
+        response_text = 'model undefined'
+        if model == "ChatGPT-3.5" or model == "ChatGPT-4o":
+            response_text = chatgpt.ask_openai(history, model=model, system_prompt=system_prompt)
+        elif model == "YandexGPT":
+            response_text = yandex_gpt.ask_yandex_gpt(history, system_prompt)
+        elif model == "GigaCHAT":
+            response_text = gigachat.ask_gigachat(history, system_prompt)
 
-    # Добавляем ответ бота в историю
-    user_data[chat_id]['history'].append(get_dict_assistant_prompt(chat_id, response_text))
+        bot.send_message(chat_id, response_text)
 
+        # Добавляем ответ бота в историю
+        user_data[chat_id]['history'].append(get_dict_assistant_prompt(chat_id, response_text))
+
+
+# Function to send an image (modify the image path as needed)
+def send_image(chat_id: int, fname: str):
+    try:
+        with open(fname, 'rb') as image:
+            bot.send_photo(chat_id, image)
+        bot.send_message(chat_id, "Image sent successfully.")
+    except Exception as e:
+        bot.send_message(chat_id, f"Failed to send image: {e}")
 
 bot.polling()
